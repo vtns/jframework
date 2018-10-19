@@ -22,6 +22,7 @@ static NSMutableDictionary * engines = nil;
 @interface JEngine() {
     J jt;
 }
+@property NSData * lastSentence;
 @end
 
 @implementation JEngine
@@ -34,9 +35,9 @@ static NSMutableDictionary * engines = nil;
     return [[[NSBundle bundleForClass:self] resourcePath] stringByAppendingPathComponent:@"jlibrary"];
 }
 
-- (void*) load:(const char*)binPath {
+- (BOOL) load:(NSString*)jlibraryPath {
     jt = JInit();
-    if (!jt) return 0;
+    if (!jt) return NO;
     [engines setObject:self forKey:[NSValue valueWithPointer:jt]];
 
     void* callbacks[] ={MyJoutput,0,MyJinput,0,(void*)SMCON};
@@ -49,16 +50,16 @@ static NSMutableDictionary * engines = nil;
     strcat(input,"[ARGV_z_=:''");
     strcat(input,"[UNAME_z_=:'Darwin'");
     strcat(input,"[BINPATH_z_=:'");
-    strcat(input, binPath);
-    strcat(input,"'");
+    strcat(input, [jlibraryPath fileSystemRepresentation]);
+    strcat(input,"/bin'");
     strcat(input,"[LIBFILE_z_=:'");
-    strcat(input, binPath);
-    strcat(input, "/dummy.dylib");
+    strcat(input, [jlibraryPath fileSystemRepresentation]);
+    strcat(input, "/bin/dummy.dylib");
     strcat(input,"'");
 
     JDo(jt, (C*) input);
 
-    return jt;
+    return YES;
 }
 
 - (void)unload {
@@ -66,8 +67,10 @@ static NSMutableDictionary * engines = nil;
     [engines removeObjectForKey:[NSValue valueWithPointer:jt]];
 }
 
-- (int) eval:(const char*)sentence {
-    return JDo(jt,(C*)sentence);
+- (BOOL) eval:(NSString*)sentence {
+    if (JDo(jt,(C*)[sentence UTF8String]))
+        return NO;
+    return YES;
 }
 
 @end
@@ -77,7 +80,10 @@ static NSMutableDictionary * engines = nil;
 C* _stdcall MyJinput(J jt, C* prompt){
     JEngine * e = [engines objectForKey:[NSValue valueWithPointer:jt]];
     if (e) {
-       return (C*) [e.delegate getWithPrompt:(const char*)prompt];
+        NSString *sentence = [e.delegate getWithPrompt:[NSString stringWithUTF8String:(const char*)prompt]];
+        const char* p = [sentence UTF8String];
+        e.lastSentence = [NSData dataWithBytes:p length:strlen(p)+1];
+        return (C*)[e.lastSentence bytes];
     }
     return (C*) "";
 }
@@ -86,7 +92,8 @@ C* _stdcall MyJinput(J jt, C* prompt){
 void _stdcall MyJoutput(J jt, int t, C* s)
 {
     JEngine * e = [engines objectForKey:[NSValue valueWithPointer:jt]];
-    [e.delegate put:(const char*)s type:(JEngineMessageType)t];
+    [e.delegate put:[NSString stringWithUTF8String:(const char*)s]
+               type:(JEngineMessageType)t];
 }
 
 /////////////////////

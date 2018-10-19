@@ -20,16 +20,16 @@ typedef enum JEngineMessageType {
 } JEngineMessageType;
 
 @protocol JEngineDelegate <NSObject>
-- (void)put:(const char*)message type:(JEngineMessageType)type;
-- (const char*)getWithPrompt:(const char*)prompt;
+- (void)put:(NSString*)message type:(JEngineMessageType)type;
+- (NSString*)getWithPrompt:(NSString*)prompt;
 @end
 
 @interface JEngine : NSObject
 @property (weak) id<JEngineDelegate> delegate;
 
 + (NSString*) jlibrary;
-- (void*) load:(const char*)binPath;
-- (int) eval:(const char*)sentence;
+- (BOOL) load:(NSString*)jlibraryPath; // returns NO if error (show stopper)
+- (BOOL) eval:(NSString*)sentence; // returns NO if error (might be just a typo in sentence or such)
 - (void) unload;
 @end
 
