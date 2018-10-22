@@ -36,6 +36,15 @@ static NSMutableDictionary * engines = nil;
 }
 
 - (BOOL) load:(NSString*)jlibraryPath {
+    
+    if ([jlibraryPath hasSuffix:@"/"]) {
+        jlibraryPath = [jlibraryPath substringToIndex:jlibraryPath.length-1];
+    }
+    
+    const char* jlibraryPath_c = [jlibraryPath fileSystemRepresentation];
+    
+    setenv("HOME", jlibraryPath_c, 1);
+
     jt = JInit();
     if (!jt) return NO;
     [engines setObject:self forKey:[NSValue valueWithPointer:jt]];
@@ -50,10 +59,10 @@ static NSMutableDictionary * engines = nil;
     strcat(input,"[ARGV_z_=:''");
     strcat(input,"[UNAME_z_=:'Darwin'");
     strcat(input,"[BINPATH_z_=:'");
-    strcat(input, [jlibraryPath fileSystemRepresentation]);
+    strcat(input, jlibraryPath_c);
     strcat(input,"/bin'");
     strcat(input,"[LIBFILE_z_=:'");
-    strcat(input, [jlibraryPath fileSystemRepresentation]);
+    strcat(input, jlibraryPath_c);
     strcat(input, "/bin/dummy.dylib");
     strcat(input,"'");
 
