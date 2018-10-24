@@ -40,10 +40,15 @@ static NSMutableDictionary * engines = nil;
     if ([jlibraryPath hasSuffix:@"/"]) {
         jlibraryPath = [jlibraryPath substringToIndex:jlibraryPath.length-1];
     }
-    
-    const char* jlibraryPath_c = [jlibraryPath fileSystemRepresentation];
-    
-    setenv("HOME", jlibraryPath_c, 1);
+
+    NSString *homePath;
+    NSRange r = [jlibraryPath rangeOfString:@"/" options: NSBackwardsSearch];
+    if (r.location != NSNotFound) {
+        homePath = [jlibraryPath substringToIndex:r.location];
+    } else {
+        homePath = jlibraryPath;
+    }
+    setenv("HOME", [homePath fileSystemRepresentation], 1);
 
     jt = JInit();
     if (!jt) return NO;
@@ -51,22 +56,18 @@ static NSMutableDictionary * engines = nil;
 
     void* callbacks[] ={MyJoutput,0,MyJinput,0,(void*)SMCON};
     JSM(jt,callbacks);
+  
+    NSString * input = [NSString stringWithFormat:
+                        @"(3 : '0!:0 y')<BINPATH,'/profile.ijs'"
+                        @"[ARGV_z_=:''"
+                        @"[UNAME_z_=:'Darwin'"
+                        @"[LIBFILE_z_=:BINPATH_z_,'dummy.dylib'"
+                        @"[BINPATH_z_=:HOMEPATH,'/Documents/j/bin'"
+                        @"[INSTALLROOT_z_=:HOMEPATH,'/Documents/j'"
+                        @"[HOMEPATH=.'%s'"
+                        @"[IFIOS=:1", [homePath fileSystemRepresentation]];
 
-    char input[4096];
-    *input=0;
-
-    strcat(input,"(3 : '0!:0 y')<BINPATH,'/profile.ijs'");
-    strcat(input,"[ARGV_z_=:''");
-    strcat(input,"[UNAME_z_=:'Darwin'");
-    strcat(input,"[BINPATH_z_=:'");
-    strcat(input, jlibraryPath_c);
-    strcat(input,"/bin'");
-    strcat(input,"[LIBFILE_z_=:'");
-    strcat(input, jlibraryPath_c);
-    strcat(input, "/bin/dummy.dylib");
-    strcat(input,"'");
-
-    JDo(jt, (C*) input);
+    JDo(jt, (C*) [input UTF8String]);
 
     return YES;
 }
